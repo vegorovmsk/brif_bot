@@ -322,7 +322,7 @@ flowchart LR
 
 ### 6.2 Правило зависимостей
 
-- `app/core` не импортирует aiogram, vkbottle, httpx, openai, sqlalchemy, gspread, google-*. Разрешены стандартная библиотека, pydantic и pyyaml.
+- `app/core` не импортирует aiogram, vkbottle, httpx, openai, sqlalchemy, gspread, google-*. Разрешены стандартная библиотека, pydantic, pyyaml, а также `phonenumbers` и `email-validator` (чистые библиотеки проверки ввода без сети и IO; решение владельца на этапе 1, 2026-10-26). Логирование в ядре — через стандартный `logging`: адаптер направляет его в structlog.
 - Ядро зависит только от интерфейсов (`typing.Protocol`) из `app/core/ports.py`: `UserRepository`, `SessionRepository`, `BriefRepository`, `BriefAI`, `DocumentRenderer`, `DeliveryService`, `Outbox`, `Clock`.
 - Реализации подставляются в `app/main.py` вручную.
 - Правило проверяет тест `tests/test_architecture.py` (разбор импортов через `ast`).

@@ -11,6 +11,7 @@ Telegram-бот @vegorovmsk_brief_bot: опрашивает заказчика �
 - `uv run ruff check . && uv run ruff format . && uv run mypy app`
 - `uv run alembic revision --autogenerate -m "..."`, `uv run alembic upgrade head`
 - `docker compose up -d --build` — запуск в Docker
+- Деплой на VPS — docs/DEPLOY.md (вручную, по SSH; доступа к серверу у Claude нет)
 
 ## Архитектура
 - app/core — ядро диалога; не импортирует aiogram, httpx, openai, sqlalchemy, google, gspread
@@ -25,7 +26,7 @@ Telegram-бот @vegorovmsk_brief_bot: опрашивает заказчика �
 - Секреты только в .env и secrets/; никогда не выводить, не логировать, не коммитить.
 - Тексты для заказчика — в config/texts.yaml, не в коде.
 - Цены и сроки разработки никогда не показываются заказчику (ADR-06).
-- Не делать реальных вызовов LLM, облаков и почты без просьбы.
+- Не делать реальных вызовов LLM, облаков и почты без просьбы; боевой токен бота не использовать.
 - В конце этапа — docs/walkthrough/stage-N.md по формату раздела 13.0.
 - При необходимости обновить CLAUDE.md по результатам этапа.
 

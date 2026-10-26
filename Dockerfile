@@ -13,6 +13,7 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY app ./app
 COPY config ./config
+COPY alembic.ini ./
 RUN mkdir -p data && chown app:app data
 USER app
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

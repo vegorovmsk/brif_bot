@@ -1,0 +1,21 @@
+﻿# Секреты и данные
+.env
+secrets/
+data/
+
+# Рабочие материалы владельца (реальные заказы, цены)
+.prep/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/

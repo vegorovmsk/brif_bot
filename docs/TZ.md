@@ -429,27 +429,33 @@ class UserRef:
     username: str | None
     first_name: str | None
 
+
 @dataclass(frozen=True)
 class TextInput:
     text: str
+
 
 @dataclass(frozen=True)
 class ButtonPress:
     payload: str
 
+
 @dataclass(frozen=True)
 class ContactShared:
     phone: str
-    is_own: bool                 # адаптер сравнил contact.user_id с отправителем
+    is_own: bool  # адаптер сравнил contact.user_id с отправителем
+
 
 @dataclass(frozen=True)
 class UnsupportedInput:
-    kind: str                    # voice, photo, document, sticker…
+    kind: str  # voice, photo, document, sticker…
+
 
 @dataclass(frozen=True)
 class CommandInput:
-    name: str                    # start, new, cancel, help, privacy, delete_my_data
+    name: str  # start, new, cancel, help, privacy, delete_my_data
     args: str = ""
+
 
 Event = TextInput | ButtonPress | ContactShared | UnsupportedInput | CommandInput
 
@@ -460,19 +466,22 @@ class Span:
     text: str
     bold: bool = False
     italic: bool = False
-    link: str | None = None      # URL для ссылки
+    link: str | None = None  # URL для ссылки
+
 
 @dataclass(frozen=True)
 class Button:
     label: str
-    payload: str                 # ≤ 64 байт ASCII (лимит Telegram); формат — раздел 6.5
+    payload: str  # ≤ 64 байт ASCII (лимит Telegram); формат — раздел 6.5
+
 
 @dataclass(frozen=True)
 class TextReply:
     spans: list[Span]
     buttons: list[list[Button]] = field(default_factory=list)
-    request_contact: bool = False          # показать кнопку «Поделиться контактом»
+    request_contact: bool = False  # показать кнопку «Поделиться контактом»
     remove_reply_keyboard: bool = False
+
 
 @dataclass(frozen=True)
 class DocumentReply:
@@ -480,9 +489,11 @@ class DocumentReply:
     content: bytes
     caption: list[Span] = field(default_factory=list)
 
+
 @dataclass(frozen=True)
 class Toast:
-    text: str                    # всплывающее уведомление в ответ на нажатие кнопки
+    text: str  # всплывающее уведомление в ответ на нажатие кнопки
+
 
 Reply = TextReply | DocumentReply | Toast
 
@@ -715,21 +726,23 @@ sequenceDiagram
 
 ```python
 class TaskType(StrEnum):
-    CHAT_BOT = "chat_bot"                              # бот: меню, анкеты, запись, уведомления, модерация
-    AI_ASSISTANT = "ai_assistant"                      # ИИ-консультант, ответы по базе знаний, разбор документов
-    AI_CONTENT = "ai_content"                          # генерация текстов, постов, изображений
-    PARSING_MONITORING = "parsing_monitoring"          # сбор данных с сайтов, отслеживание цен и объявлений
+    CHAT_BOT = "chat_bot"  # бот: меню, анкеты, запись, уведомления, модерация
+    AI_ASSISTANT = "ai_assistant"  # ИИ-консультант, ответы по базе знаний, разбор документов
+    AI_CONTENT = "ai_content"  # генерация текстов, постов, изображений
+    PARSING_MONITORING = "parsing_monitoring"  # сбор данных с сайтов, отслеживание цен и объявлений
     INTEGRATION_AUTOMATION = "integration_automation"  # интеграции по API, выгрузки, отчёты, CRM
-    DATA_ANALYTICS = "data_analytics"                  # анализ данных, прогнозы, дашборды, оптимизация
+    DATA_ANALYTICS = "data_analytics"  # анализ данных, прогнозы, дашборды, оптимизация
     OTHER = "other"
 
+
 class Question(BaseModel):
-    id: str = Field(pattern=r"^[a-z]{1,2}\d{1,2}$")   # q1 от LLM, cb1 из банка
+    id: str = Field(pattern=r"^[a-z]{1,2}\d{1,2}$")  # q1 от LLM, cb1 из банка
     text: str = Field(min_length=10, max_length=300)
     options: list[Annotated[str, Field(max_length=40)]] = Field(default_factory=list, max_length=4)
     allow_free_text: bool = True
 
-class Analysis(BaseModel):                 # ответ analyze
+
+class Analysis(BaseModel):  # ответ analyze
     is_dev_task: bool
     task_type: TaskType
     understanding: str = Field(max_length=500)
@@ -737,7 +750,8 @@ class Analysis(BaseModel):                 # ответ analyze
     questions: list[Question] = Field(max_length=5)
     # валидатор: при is_dev_task=True вопросов 3–5; при False — 0–5
 
-class BriefDraft(BaseModel):               # ответ synthesize и часть ответа revise; без сроков и бюджета
+
+class BriefDraft(BaseModel):  # ответ synthesize и часть ответа revise; без сроков и бюджета
     title: str = Field(max_length=80)
     task_type: TaskType
     summary: str = Field(max_length=800)
@@ -752,32 +766,36 @@ class BriefDraft(BaseModel):               # ответ synthesize и часть
     risks: list[str] = Field(default_factory=list, max_length=6)
     open_questions: list[str] = Field(default_factory=list, max_length=8)
 
-class Brief(BriefDraft):                   # то, что видит заказчик; добавляет код
-    brief_id: str                          # B-261023-007
+
+class Brief(BriefDraft):  # то, что видит заказчик; добавляет код
+    brief_id: str  # B-261023-007
     version: int
-    deadline: str                          # из ответа заказчика
-    budget: str                            # из ответа заказчика
-    materials: list[str]                   # из мультивыбора
-    qa: list[QAItem]                       # вопросы и ответы заказчика (QAItem: question, answer)
-    client_comments: list[str] = []        # правки, которые не удалось внести автоматически
+    deadline: str  # из ответа заказчика
+    budget: str  # из ответа заказчика
+    materials: list[str]  # из мультивыбора
+    qa: list[QAItem]  # вопросы и ответы заказчика (QAItem: question, answer)
+    client_comments: list[str] = []  # правки, которые не удалось внести автоматически
     generated_by: Literal["llm", "template"]
     created_at: datetime
 
-class BriefRevision(BaseModel):            # ответ revise
+
+class BriefRevision(BaseModel):  # ответ revise
     brief: BriefDraft
     changes: list[str] = Field(max_length=5)
 
+
 class RiskFlag(StrEnum):
-    PLATFORM_RULES = "platform_rules"          # автоматизация против правил площадки (Profi.ru, Авито, инвайтинг в Telegram)
-    PERSONAL_DATA = "personal_data"            # сбор и хранение ПДн
-    MONEY_AUTOMATION = "money_automation"      # бот сам тратит деньги или выполняет платные действия
+    PLATFORM_RULES = "platform_rules"  # автоматизация против правил площадки (Profi.ru, Авито, инвайтинг в Telegram)
+    PERSONAL_DATA = "personal_data"  # сбор и хранение ПДн
+    MONEY_AUTOMATION = "money_automation"  # бот сам тратит деньги или выполняет платные действия
     UNCLEAR_SCOPE = "unclear_scope"
     LOW_BUDGET = "low_budget"
-    THIRD_PARTY_CODE = "third_party_code"      # доработка чужого кода
-    FOREIGN_API = "foreign_api"                # нужен доступ к зарубежным API из РФ
-    DATA_AVAILABILITY = "data_availability"    # нужных данных может не быть в открытом доступе
+    THIRD_PARTY_CODE = "third_party_code"  # доработка чужого кода
+    FOREIGN_API = "foreign_api"  # нужен доступ к зарубежным API из РФ
+    DATA_AVAILABILITY = "data_availability"  # нужных данных может не быть в открытом доступе
 
-class OwnerEstimate(BaseModel):            # ответ estimate — только для владельца
+
+class OwnerEstimate(BaseModel):  # ответ estimate — только для владельца
     complexity: Literal["S", "M", "L", "XL"]
     effort_hours_min: int = Field(ge=1)
     effort_hours_max: int = Field(ge=1)
@@ -810,15 +828,15 @@ class OwnerEstimate(BaseModel):            # ответ estimate — тольк�
 ```python
 class SessionData(BaseModel):
     description: str | None = None
-    analysis: Analysis | None = None               # в шаблонном режиме — None
+    analysis: Analysis | None = None  # в шаблонном режиме — None
     task_type: TaskType | None = None
-    questions: list[Question] = []                 # от LLM или из банка
+    questions: list[Question] = []  # от LLM или из банка
     current_question: int = 0
-    answers: dict[str, Answer] = {}                # Answer: value, label, skipped
+    answers: dict[str, Answer] = {}  # Answer: value, label, skipped
     deadline: str | None = None
     budget: str | None = None
     materials: list[str] = []
-    contact_name: str | None = None                # дублируется в contacts при подтверждении
+    contact_name: str | None = None  # дублируется в contacts при подтверждении
     contact_method: str | None = None
     brief_draft: BriefDraft | None = None
     revisions: int = 0

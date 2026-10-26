@@ -8,6 +8,11 @@ services:
       - ./data:/app/data
       - ./secrets:/app/secrets:ro
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "python", "-m", "app.healthcheck"]
       interval: 30s

@@ -20,6 +20,8 @@ choose_type: "К чему ближе ваша задача?"
 
 question_header: "Вопрос {n} из {total}."
 skip_button: "Пропустить"
+multi_hint: "Можно выбрать несколько."
+multi_done_button: "Готово"
 answer_too_long: "Ответ слишком длинный. Сократите, пожалуйста, до 1000 символов."
 
 deadline_q: "Когда нужен результат?"

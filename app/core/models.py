@@ -26,6 +26,10 @@ class Question(BaseModel):
     text: str = Field(min_length=10, max_length=300)
     options: list[Annotated[str, Field(max_length=40)]] = Field(default_factory=list, max_length=4)
     allow_free_text: bool = True
+    # Мультивыбор: варианты переключаются, ответ — выбранные через запятую.
+    multi: bool = False
+    # Вариант-исключение («Ничего из этого»): выбирается один, снимает остальные.
+    exclusive: str | None = Field(default=None, max_length=40)
 
 
 class Answer(BaseModel):

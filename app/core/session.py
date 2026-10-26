@@ -26,6 +26,7 @@ class SessionData(BaseModel):
     task_type: TaskType | None = None
     questions: list[Question] = Field(default_factory=list)
     current_question: int = 0
+    multi_selected: list[str] = Field(default_factory=list)  # отметки в вопросе с мультивыбором
     answers: dict[str, Answer] = Field(default_factory=dict)
     deadline: str | None = None
     budget: str | None = None

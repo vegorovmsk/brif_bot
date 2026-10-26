@@ -168,6 +168,50 @@ async def test_fr9_free_text_answer_and_skip(world: World) -> None:
     assert "Вопрос 3 из 4" in chat.said()
 
 
+async def test_fr9_multi_choice_question_cb4(world: World) -> None:
+    chat = Chat(world.make_engine(), make_user())
+    await chat.cmd("start")
+    await chat.press("Согласен")
+    await chat.text(DESCRIPTION)
+    await chat.press("Бот: анкеты")
+    for _ in range(3):  # вопросы 1-3 пропускаем
+        await chat.press("Пропустить")
+    assert "Вопрос 4 из 4" in chat.said() and "Можно выбрать несколько" in chat.said()
+
+    await chat.press("Оплата")
+    assert isinstance(chat.last[0], TextReply) and chat.last[0].edit_in_place
+    await chat.press("Рассылки")
+    assert [b.label for b in chat.buttons() if b.label.startswith("✅")] == [
+        "✅ Оплата",
+        "✅ Рассылки",
+    ]
+    await chat.press("Ничего из этого")  # исключающий вариант снимает остальные
+    assert [b.label for b in chat.buttons() if b.label.startswith("✅")] == ["✅ Ничего из этого"]
+    await chat.press("Админ-панель")  # а выбор другого снимает «Ничего»
+    await chat.press("Оплата")
+    await chat.press("Готово")
+    assert "срок" in chat.said().lower() or "Когда нужен результат" in chat.said()
+
+    async with world.factory() as db:
+        data = (await db.scalar(select(SessionRow.data))) or ""
+    assert '"cb4":{"value":"Оплата, Админ-панель"' in data  # порядок — как в банке
+    assert '"multi_selected":[]' in data
+
+
+async def test_multi_choice_done_without_selection_counts_as_skip(world: World) -> None:
+    chat = Chat(world.make_engine(), make_user())
+    await chat.cmd("start")
+    await chat.press("Согласен")
+    await chat.text(DESCRIPTION)
+    await chat.press("Бот: анкеты")
+    for _ in range(3):
+        await chat.press("Пропустить")
+    await chat.press("Готово")
+    async with world.factory() as db:
+        data = (await db.scalar(select(SessionRow.data))) or ""
+    assert '"cb4":{"value":"","skipped":true}' in data
+
+
 async def test_materials_toggle_and_nothing_option(world: World) -> None:
     chat = Chat(world.make_engine(), make_user())
     await chat.cmd("start")

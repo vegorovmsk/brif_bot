@@ -21,6 +21,8 @@ class Texts(BaseModel):
     choose_type: str
     question_header: str
     skip_button: str
+    multi_hint: str
+    multi_done_button: str
     answer_too_long: str
     deadline_q: str
     deadline_options: list[str] = Field(min_length=5, max_length=5)

@@ -7,7 +7,8 @@ Telegram-бот @vegorovmsk_brief_bot: опрашивает заказчика �
 - `uv sync` — зависимости
 - `uv run python -m app.main` — локальный запуск (dev-бот, .env)
 - `uv run pytest -q` — тесты
-- `uv run python tools/eval.py` — eval с реальной LLM (платно, только по просьбе владельца)
+- `uv run python tools/eval.py` — eval с реальной LLM (платно, только по просьбе владельца);
+  `--fake` — тот же прогон на FakeLLM, бесплатно, качество не оценивает
 - `uv run ruff check . && uv run ruff format . && uv run mypy app`
 - `uv run alembic revision --autogenerate -m "..."`, `uv run alembic upgrade head`
 - `docker compose up -d --build` — запуск в Docker
@@ -16,6 +17,10 @@ Telegram-бот @vegorovmsk_brief_bot: опрашивает заказчика �
 ## Архитектура
 - app/core — ядро диалога; не импортирует aiogram, httpx, openai, sqlalchemy, google, gspread
   (проверяет tests/test_architecture.py)
+- LLM: `LLM_PROVIDER=fake` — локальный запуск без ключа (FakeLLM с типовыми ответами);
+  `/llm on|off` владельца хранится в БД и сильнее `LLM_ENABLED` из .env
+- SDK `openai` 3.x работает на `httpx2`: `respx` его запросы не видит, клиент тестируем
+  через `httpx2.MockTransport` (tests/unit/test_llm_units.py)
 - app/adapters/* — мессенджеры; app/llm — LLM; app/storage — БД; app/documents — docx;
   app/delivery — облака и почта; app/integrations — таблица и уведомления; app/jobs — фон
 

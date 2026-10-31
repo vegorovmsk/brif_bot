@@ -56,6 +56,6 @@ def assemble_brief(
         materials=list(data.materials),
         qa=qa,
         client_comments=[strip_contacts(c) for c in data.client_comments],
-        generated_by="template",
+        generated_by=data.generated_by,
         created_at=created_at,
     )

@@ -8,9 +8,9 @@ from typing import Protocol
 from pydantic import BaseModel
 
 from app.core.events import UserRef
-from app.core.models import Brief
+from app.core.models import Analysis, Brief, BriefDraft, BriefRevision
 from app.core.replies import Span
-from app.core.session import Session
+from app.core.session import Session, SessionData
 
 
 class User(BaseModel):
@@ -111,6 +111,30 @@ class Outbox(Protocol):
     """Фоновые задачи после подтверждения брифа (на этапе 1 — InlineFinalizer)."""
 
     async def enqueue_finalize(self, brief_id: str) -> None: ...
+
+
+class BriefAI(Protocol):
+    """Вызовы LLM, тексты которых видит заказчик (ADR-06).
+
+    None во всех методах значит «LLM недоступна»: она выключена, исчерпан бюджет, случилась
+    ошибка или ответ нарушил проверки после повтора. Запасной путь выбирает ядро (ТЗ, 11.8).
+    """
+
+    async def analyze(self, description: str, *, session_id: int) -> Analysis | None: ...
+
+    async def synthesize(self, data: SessionData, *, session_id: int) -> BriefDraft | None: ...
+
+    async def revise(
+        self, draft: BriefDraft, correction: str, *, session_id: int
+    ) -> BriefRevision | None: ...
+
+
+class LLMSwitch(Protocol):
+    """Переключатель LLM владельцем: /llm on|off (ТЗ, 3.3). Значение переживает перезапуск."""
+
+    async def is_enabled(self) -> bool: ...
+
+    async def set_enabled(self, enabled: bool) -> None: ...
 
 
 class ReviewRenderer(Protocol):

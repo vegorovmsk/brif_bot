@@ -4,9 +4,9 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, BotCommandScopeChat
 
-from app.adapters.telegram.handlers import USER_COMMANDS, router
+from app.adapters.telegram.handlers import OWNER_COMMANDS, USER_COMMANDS, router
 from app.adapters.telegram.middlewares import PrivateChatOnly, Throttle, UserLock
 from app.config import Settings
 from app.core.engine import ConversationEngine
@@ -34,9 +34,14 @@ def create_dispatcher(engine: ConversationEngine, settings: Settings, texts: Tex
     return dp
 
 
-async def setup_commands(bot: Bot, texts: Texts) -> None:
-    """Меню команд для всех пользователей (владельческие команды — этап 5)."""
+async def setup_commands(bot: Bot, texts: Texts, owner_chat_id: int | None = None) -> None:
+    """Меню команд: для всех — пользовательские, в чате владельца — ещё и владельческие."""
     commands = [
         BotCommand(command=name, description=texts.commands[name]) for name in USER_COMMANDS
     ]
     await bot.set_my_commands(commands)
+    if owner_chat_id is not None:
+        owner_commands = commands + [
+            BotCommand(command=name, description=texts.commands[name]) for name in OWNER_COMMANDS
+        ]
+        await bot.set_my_commands(owner_commands, scope=BotCommandScopeChat(chat_id=owner_chat_id))

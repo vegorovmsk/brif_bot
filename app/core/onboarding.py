@@ -1,6 +1,6 @@
 """Начало диалога: экран согласия (FR-3) и создание сессии (FR-13)."""
 
-from app.core.context import Context
+from app.core.context import Context, is_owner
 from app.core.events import UserRef
 from app.core.payload import encode
 from app.core.ports import User
@@ -52,9 +52,10 @@ async def begin_session(
     """Новая сессия с вопроса DESCRIBE; незавершённая сессия удаляется; лимит брифов (FR-13)."""
     now = ctx.clock.now()
     day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    if await ctx.briefs.count_confirmed_since(db_user.id, day_start) >= (
-        ctx.config.max_briefs_per_user_per_day
-    ):
+    # Владельцу лимит не нужен: ему надо проверять бота на боевом сервере (FR-13).
+    if not is_owner(ctx.config, user) and await ctx.briefs.count_confirmed_since(
+        db_user.id, day_start
+    ) >= (ctx.config.max_briefs_per_user_per_day):
         text = ctx.texts.limit_reached.format(owner_username=ctx.config.owner_username)
         return [say(text)]
     old = await ctx.sessions.get_active(db_user.id)

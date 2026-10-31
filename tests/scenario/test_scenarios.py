@@ -118,12 +118,16 @@ async def test_fr5_stale_button_does_not_change_state(world: World) -> None:
     old_choice = [b for b in chat.buttons() if "ИИ" in b.label][0].payload
     await chat.payload(old_choice)
     assert "Вопрос 1 из 4" in chat.said()
+    async with world.factory() as db:
+        row = await db.scalar(select(SessionRow))
+        assert row is not None
+        seq_before = row.step_seq
 
     await chat.payload(old_choice)  # двойное нажатие
     assert [r for r in chat.last if isinstance(r, Toast)][0].text == "Этот шаг уже пройден"
     async with world.factory() as db:
         row = await db.scalar(select(SessionRow))
-        assert row is not None and row.state == "clarify" and row.step_seq == 3
+        assert row is not None and row.state == "clarify" and row.step_seq == seq_before
 
 
 async def test_fr10_resume_after_restart(world: World) -> None:

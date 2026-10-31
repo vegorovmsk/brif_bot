@@ -26,13 +26,37 @@ class StepResult:
 
 PromptFn = Callable[[Context, Session, UserRef], list[Reply]]
 HandleFn = Callable[[Context, Session, UserRef, Event], Awaitable[StepResult]]
+RunFn = Callable[[Context, Session], Awaitable[StepResult]]
 
 
 class Step(NamedTuple):
-    """Обработчики одного состояния: что показать и как реагировать на событие."""
+    """Обработчики одного состояния: что показать и как реагировать на событие.
+
+    run есть только у служебных состояний (ANALYZING, SYNTHESIZING): они не ждут ввода,
+    а сразу вызывают LLM. Движок сохраняет сессию до run (FR-10); если бот перезапустился
+    во время вызова, следующее событие заказчика повторяет run.
+    """
 
     prompt: PromptFn
     handle: HandleFn
+    run: RunFn | None = None
+
+
+def session_id(session: Session) -> int:
+    """ID сохранённой сессии; служебные состояния работают только после сохранения (FR-10)."""
+    if session.id is None:
+        raise RuntimeError("сессия без ID: её нужно сначала сохранить")
+    return session.id
+
+
+async def no_input(ctx: Context, session: Session, user: UserRef, event: Event) -> StepResult:
+    """handle служебного состояния: движок вызывает run, а не handle, поэтому ввод не нужен."""
+    return StepResult()
+
+
+def no_prompt(ctx: Context, session: Session, user: UserRef) -> list[Reply]:
+    """prompt служебного состояния: показывается индикатор «печатает…», текста нет."""
+    return []
 
 
 def say(text: str) -> TextReply:

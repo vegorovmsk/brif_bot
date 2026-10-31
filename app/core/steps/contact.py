@@ -6,16 +6,14 @@ from app.core.replies import Reply, TextReply, plain
 from app.core.session import Session
 from app.core.states import State
 from app.core.steps.common import StepResult, button, pressed, say, unexpected
-from app.core.template_brief import build_template_draft
 from app.core.validation import NAME_MAX, normalize_phone, validate_email
 
 _NAME_BUTTON_MAX = 40
 
 
 def _finish(ctx: Context, session: Session) -> StepResult:
-    """Контакты собраны: без LLM бриф строится по шаблону и сразу идёт на проверку."""
-    session.data.brief_draft = build_template_draft(session.data, ctx.bank)
-    return StepResult(next_state=State.REVIEW)
+    """Контакты собраны: бриф собирается в SYNTHESIZING (LLM или шаблон, FR-21)."""
+    return StepResult(next_state=State.SYNTHESIZING)
 
 
 # --- CONTACT_NAME ---

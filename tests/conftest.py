@@ -23,12 +23,17 @@ from app.core.question_bank import QuestionBank, load_question_bank
 from app.core.replies import Button, Reply, TextReply, Toast
 from app.core.texts import Texts, load_texts
 from app.documents.review import TextReviewRenderer
+from app.llm.brief_ai import LLMBriefAI, NullBriefAI
+from app.llm.costs import BudgetGuard, Prices
+from app.llm.fake import FakeLLM
 from app.storage.db import create_engine, create_session_factory
 from app.storage.repositories import (
     SessionFactory,
     SqlAuditLog,
     SqlBriefRepository,
     SqlContactRepository,
+    SqlLLMCallLog,
+    SqlLLMSwitch,
     SqlSessionRepository,
     SqlUserRepository,
 )
@@ -68,11 +73,35 @@ class World:
     outbox: FakeOutbox
     texts: Texts
     bank: QuestionBank
+    alerts: list[str] = field(default_factory=list)  # оповещения владельцу о бюджете LLM
 
-    def make_engine(self, **config: object) -> ConversationEngine:
-        """Новый движок на той же БД — так выглядит перезапуск бота."""
+    def make_engine(
+        self, *, llm: FakeLLM | None = None, llm_budget: float = 0, **config: object
+    ) -> ConversationEngine:
+        """Новый движок на той же БД — так выглядит перезапуск бота.
+
+        Без llm работает шаблонный режим (как LLM_ENABLED=false). С llm он включён по
+        умолчанию, но /llm off, сохранённый в БД, сильнее. Цена фейка 0,2 ₽ за вызов.
+        """
         settings: dict[str, object] = {"owner_username": "vegorovmsk", "consent_version": "v1"}
         settings.update(config)
+        switch = SqlLLMSwitch(self.factory, default=llm is not None)
+        calls = SqlLLMCallLog(self.factory)
+
+        async def notify(text: str) -> None:
+            self.alerts.append(text)
+
+        ai: LLMBriefAI | NullBriefAI = NullBriefAI()
+        if llm is not None:
+            ai = LLMBriefAI(
+                llm,
+                switch=switch,
+                budget=BudgetGuard(calls, llm_budget, self.clock, notify),
+                calls=calls,
+                bank=self.bank,
+                clock=self.clock,
+                prices=Prices(1.0, 2.0),
+            )
         ctx = Context(
             users=SqlUserRepository(self.factory),
             sessions=SqlSessionRepository(self.factory),
@@ -85,6 +114,8 @@ class World:
             texts=self.texts,
             bank=self.bank,
             config=EngineConfig(**settings),  # type: ignore[arg-type]
+            ai=ai,
+            llm_switch=switch,
         )
         return ConversationEngine(ctx)
 

@@ -4,6 +4,7 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message
 from aiogram.types import User as TgUser
+from aiogram.utils.chat_action import ChatActionSender
 
 from app.adapters.telegram.sender import deliver
 from app.core.engine import ConversationEngine
@@ -20,6 +21,10 @@ from app.core.events import (
 router = Router(name="main")
 
 USER_COMMANDS = ("start", "new", "cancel", "help", "privacy", "delete_my_data")
+# Владельческие команды; от чужого пользователя ядро отвечает как на неизвестную (FR-37).
+OWNER_COMMANDS = ("llm",)
+# Индикатор «печатает…» начинается не сразу, чтобы не мигать на быстрых шагах без LLM.
+TYPING_INITIAL_SLEEP = 0.7
 
 
 def user_ref(user: TgUser) -> UserRef:
@@ -40,11 +45,14 @@ async def _process(
     event: Event,
     callback: CallbackQuery | None = None,
 ) -> None:
-    replies = await engine.handle(user_ref(tg_user), event)
+    async with ChatActionSender.typing(
+        bot=bot, chat_id=chat_id, initial_sleep=TYPING_INITIAL_SLEEP
+    ):
+        replies = await engine.handle(user_ref(tg_user), event)
     await deliver(bot, chat_id, replies, callback)
 
 
-@router.message(Command(*USER_COMMANDS))
+@router.message(Command(*USER_COMMANDS, *OWNER_COMMANDS))
 async def on_command(
     message: Message, command: CommandObject, bot: Bot, engine: ConversationEngine
 ) -> None:

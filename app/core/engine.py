@@ -2,7 +2,7 @@
 
 import logging
 
-from app.core import commands, onboarding
+from app.core import commands, flow, onboarding
 from app.core.context import Context
 from app.core.events import ButtonPress, CommandInput, Event, UserRef
 from app.core.payload import parse
@@ -71,12 +71,11 @@ class ConversationEngine:
         step = STEPS.get(session.state)
         if step is None:
             return [say(ctx.texts.no_session)]
-        result = await step.handle(ctx, session, user, event)
-        replies = list(result.replies)
-        if result.next_state is not None:
-            log.info("state_changed: %s -> %s", session.state, result.next_state)
-            session.state = result.next_state
-            session.step_seq += 1
-            replies += STEPS[session.state].prompt(ctx, session, user)
+        if step.run is not None:
+            # Бот перезапустился посреди вызова LLM: повторяем его с сохранёнными данными (FR-10).
+            result = await step.run(ctx, session)
+        else:
+            result = await step.handle(ctx, session, user, event)
+        replies = await flow.apply_result(ctx, session, user, result)
         await ctx.sessions.save(session, ctx.clock.now())
         return replies

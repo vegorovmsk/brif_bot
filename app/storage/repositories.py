@@ -4,7 +4,7 @@ import hashlib
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -13,10 +13,13 @@ from app.core.models import Brief
 from app.core.ports import Contact, FinalizeInfo, User
 from app.core.session import Session, SessionData, SessionStatus
 from app.core.states import State
+from app.llm.costs import LLMCall
 from app.storage.tables import (
     AuditLogRow,
+    BotSettingRow,
     BriefRow,
     ContactRow,
+    LLMCallRow,
     SessionRow,
     UserRow,
 )
@@ -254,6 +257,66 @@ class SqlContactRepository:
             row.username = contact.username
             row.preferred_method = contact.preferred_method
             row.updated_at = to_db(now)
+            await db.commit()
+
+
+class SqlLLMCallLog:
+    """Журнал вызовов LLM (FR-39): учёт токенов и стоимости без текстов заказчика."""
+
+    def __init__(self, factory: SessionFactory) -> None:
+        self._factory = factory
+
+    async def record(self, call: LLMCall) -> None:
+        async with self._factory() as db:
+            db.add(
+                LLMCallRow(
+                    session_id=call.session_id,
+                    purpose=call.purpose,
+                    provider=call.provider,
+                    model=call.model,
+                    prompt_tokens=call.prompt_tokens,
+                    completion_tokens=call.completion_tokens,
+                    cost_rub=call.cost_rub,
+                    latency_ms=call.latency_ms,
+                    ok=call.ok,
+                    error_kind=call.error_kind,
+                    created_at=to_db(call.created_at),
+                )
+            )
+            await db.commit()
+
+    async def cost_since(self, since: datetime) -> float:
+        async with self._factory() as db:
+            total = await db.scalar(
+                select(func.coalesce(func.sum(LLMCallRow.cost_rub), 0.0)).where(
+                    LLMCallRow.created_at >= to_db(since)
+                )
+            )
+            return float(total or 0.0)
+
+
+class SqlLLMSwitch:
+    """Флаг «LLM включена»: хранится в БД, чтобы /llm off пережил перезапуск."""
+
+    _KEY = "llm_enabled"
+
+    def __init__(self, factory: SessionFactory, default: bool) -> None:
+        self._factory = factory
+        self._default = default
+
+    async def is_enabled(self) -> bool:
+        async with self._factory() as db:
+            row = await db.get(BotSettingRow, self._KEY)
+            return self._default if row is None else row.value == "1"
+
+    async def set_enabled(self, enabled: bool) -> None:
+        async with self._factory() as db:
+            row = await db.get(BotSettingRow, self._KEY)
+            if row is None:
+                row = BotSettingRow(key=self._KEY)
+                db.add(row)
+            row.value = "1" if enabled else "0"
+            row.updated_at = to_db(datetime.now(UTC))
             await db.commit()
 
 

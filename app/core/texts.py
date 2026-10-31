@@ -19,6 +19,10 @@ class Texts(BaseModel):
     describe_too_short: str
     describe_too_long: str
     choose_type: str
+    understanding: str
+    offtopic: str
+    offtopic_other_button: str
+    offtopic_continue_button: str
     question_header: str
     skip_button: str
     multi_hint: str
@@ -52,6 +56,7 @@ class Texts(BaseModel):
     review_edit_button: str
     revise_prompt: str
     revise_added: str
+    revise_applied: str
     revise_too_long: str
     revise_limit: str
     no_price: str
@@ -64,6 +69,9 @@ class Texts(BaseModel):
     no_session: str
     limit_reached: str
     unknown_command: str
+    llm_on: str
+    llm_off: str
+    llm_status: str
     help: str
     privacy: str
     privacy_link: str

@@ -2,8 +2,8 @@
 
 from datetime import datetime
 
-from app.core import onboarding
-from app.core.context import Context
+from app.core import flow, onboarding
+from app.core.context import Context, is_owner
 from app.core.events import CommandInput, UserRef
 from app.core.payload import Payload, encode
 from app.core.ports import User
@@ -78,8 +78,23 @@ async def handle_command(
             if db_user is None:
                 return [say(texts.delete_nothing)]
             return [_confirm(ctx, session, texts.delete_confirm, "d")]
+        case "llm":
+            # Владельческая команда: для остальных — как неизвестная (FR-37).
+            if not is_owner(ctx.config, user):
+                return [say(texts.unknown_command)]
+            return [await _llm_command(ctx, command.args)]
         case _:
             return [say(texts.unknown_command)]
+
+
+async def _llm_command(ctx: Context, args: str) -> Reply:
+    """/llm on|off включает и выключает LLM; без аргумента показывает состояние."""
+    arg = args.strip().lower()
+    if arg in ("on", "off"):
+        await ctx.llm_switch.set_enabled(arg == "on")
+        return say(ctx.texts.llm_on if arg == "on" else ctx.texts.llm_off)
+    enabled = await ctx.llm_switch.is_enabled()
+    return say(ctx.texts.llm_status.format(state="включена" if enabled else "выключена"))
 
 
 async def new_brief_pressed(
@@ -119,7 +134,13 @@ async def _show_current(ctx: Context, user: UserRef, session: Session) -> list[R
     """Повторить текущий шаг; step_seq растёт, чтобы старые кнопки перестали работать."""
     session.step_seq += 1
     await ctx.sessions.save(session, ctx.clock.now())
-    return STEPS[session.state].prompt(ctx, session, user)
+    step = STEPS[session.state]
+    if step.run is not None:
+        # Сессия застряла в служебном состоянии (перезапуск во время вызова LLM): повторяем вызов.
+        replies = await flow.apply_result(ctx, session, user, await step.run(ctx, session))
+        await ctx.sessions.save(session, ctx.clock.now())
+        return replies
+    return step.prompt(ctx, session, user)
 
 
 async def _confirmed(

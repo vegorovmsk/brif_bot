@@ -2,7 +2,17 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -78,6 +88,36 @@ class BriefRow(Base):
     estimate_done_at: Mapped[datetime | None] = mapped_column(DateTime)
     owner_notified_at: Mapped[datetime | None] = mapped_column(DateTime)
     sheet_row_added_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class LLMCallRow(Base):
+    """Один вызов LLM (FR-39). Без FK и текстов: нужна для расходов, переживает удаление данных."""
+
+    __tablename__ = "llm_calls"
+    __table_args__ = (Index("ix_llm_calls_created_at", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int | None] = mapped_column(Integer)
+    purpose: Mapped[str] = mapped_column(String(16))
+    provider: Mapped[str] = mapped_column(String(16))
+    model: Mapped[str] = mapped_column(String(128))
+    prompt_tokens: Mapped[int] = mapped_column(Integer)
+    completion_tokens: Mapped[int] = mapped_column(Integer)
+    cost_rub: Mapped[float] = mapped_column(Float)
+    latency_ms: Mapped[int] = mapped_column(Integer)
+    ok: Mapped[bool] = mapped_column(Boolean)
+    error_kind: Mapped[str | None] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class BotSettingRow(Base):
+    """Настройки, которые владелец меняет командами и которые переживают перезапуск (/llm)."""
+
+    __tablename__ = "bot_settings"
+
+    key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    value: Mapped[str] = mapped_column(String(255))
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 class AuditLogRow(Base):

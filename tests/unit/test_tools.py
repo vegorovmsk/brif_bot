@@ -47,3 +47,66 @@ def test_format_result_lines() -> None:
     assert ok.startswith("OK") and "42 мс" in ok
     fail = format_result(Result("a.example", 443, False, 5, "TimeoutError"), "Сервис", "подсказка")
     assert fail.startswith("FAIL") and "TimeoutError" in fail and "подсказка" in fail
+
+
+# --- tools/eval.py (этап 3) ---
+
+
+def test_eval_cases_cover_section_14_3() -> None:
+    from tools.eval import load_cases
+
+    cases = load_cases().cases
+    assert [c.id for c in cases] == list(range(1, 17))
+    assert cases[14].expect_is_dev_task is False  # кейс 15 — не про разработку
+    assert cases[15].expect_is_dev_task is None  # кейс 16 — prompt injection, любой ответ
+    assert all(c.allowed_types for c in cases)
+
+
+async def test_eval_fake_run_writes_report(tmp_path: Path) -> None:
+    from tools.eval import run, write_report
+
+    report, _ = await run(fake=True)
+    path = write_report(report, tmp_path)
+    text = path.read_text(encoding="utf-8")
+    assert path.name.startswith("report_") and "Режим `--fake`" in text
+    assert text.count("\n### ") == 16  # подробный раздел на каждый кейс
+
+
+def test_eval_verdict_requires_twelve_types_and_no_money() -> None:
+    from app.core.models import Analysis, TaskType
+    from tools.eval import Case, CaseResult, verdict
+
+    def result(case_id: int, *, type_ok: bool, dev: bool = True, money: int = 0) -> CaseResult:
+        case = Case(
+            id=case_id,
+            title="t",
+            description="d",
+            budget="b",
+            deadline="d",
+            allowed_types=[TaskType.CHAT_BOT],
+        )
+        analysis = (
+            Analysis(
+                is_dev_task=dev,
+                task_type=TaskType.CHAT_BOT,
+                understanding="u",
+                known_facts=[],
+                questions=[],
+            )
+            if not dev
+            else None
+        )
+        return CaseResult(case, analysis=analysis, type_ok=type_ok, money_violations=money)
+
+    good = [result(i, type_ok=i <= 12) for i in range(1, 15)] + [
+        result(15, type_ok=True, dev=False)
+    ]
+    assert all(ok for _, ok in verdict(good))
+
+    few_types = [result(i, type_ok=i <= 11) for i in range(1, 15)] + [
+        result(15, type_ok=True, dev=False)
+    ]
+    assert [ok for _, ok in verdict(few_types)] == [False, True, True]
+
+    with_money = [*good, result(16, type_ok=True, money=1)]
+    assert [ok for _, ok in verdict(with_money)] == [True, True, False]

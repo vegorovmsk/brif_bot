@@ -15,7 +15,7 @@ def prompt(ctx: Context, session: Session, user: UserRef) -> list[Reply]:
 
 
 async def handle(ctx: Context, session: Session, user: UserRef, event: Event) -> StepResult:
-    """Принять описание 20-4000 символов; без LLM дальше — выбор типа кнопкой (FR-18)."""
+    """Принять описание 20-4000 символов; дальше ANALYZING (при сбое LLM — CHOOSE_TYPE, FR-18)."""
     if not isinstance(event, TextInput):
         return unexpected(ctx, event)
     problem = description_problem(event.text)
@@ -24,4 +24,4 @@ async def handle(ctx: Context, session: Session, user: UserRef, event: Event) ->
     if problem == "long":
         return StepResult([say(ctx.texts.describe_too_long)])
     session.data.description = event.text.strip()
-    return StepResult(next_state=State.CHOOSE_TYPE)
+    return StepResult(next_state=State.ANALYZING)

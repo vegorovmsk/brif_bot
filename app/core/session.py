@@ -43,6 +43,10 @@ class SessionData(BaseModel):
     delivered_channels: list[str] = Field(default_factory=list)
     awaiting_custom_deadline: bool = False
     awaiting_phone: bool = False
+    # Чем собран brief_draft; нужен, чтобы в бриф попала верная пометка (FR-21).
+    generated_by: Literal["llm", "template"] = "template"
+    # Правка, отправленная в revise: если бот перезапустился во время вызова, вызов повторится.
+    pending_correction: str | None = None
 
 
 class Session(BaseModel):
